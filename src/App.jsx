@@ -9,7 +9,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/admin" replace />} />
         <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/select/:token" element={<ParticipantSelection />} />
+        <Route path="/participant/:token" element={<ParticipantSelection />} />
       </Routes>
     </BrowserRouter>
   );
