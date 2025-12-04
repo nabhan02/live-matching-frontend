@@ -13,6 +13,7 @@ const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('upload'); // upload, participants, matches
     const [loginError, setLoginError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [qrCodeParticipant, setQrCodeParticipant] = useState(null);
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -193,6 +194,14 @@ const AdminDashboard = () => {
         });
     };
 
+    const showQRCode = (participant) => {
+        setQrCodeParticipant(participant);
+    };
+
+    const closeQRCode = () => {
+        setQrCodeParticipant(null);
+    };
+
     useEffect(() => {
         if (isAuthenticated && activeTab === 'matches') {
             loadMatches();
@@ -363,6 +372,12 @@ const AdminDashboard = () => {
                                                             >
                                                                 📧 Email
                                                             </button>
+                                                            <button
+                                                                onClick={() => showQRCode(p)}
+                                                                className="btn btn-sm btn-secondary"
+                                                            >
+                                                                📱 QR
+                                                            </button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -516,6 +531,33 @@ const AdminDashboard = () => {
                     </div>
                 )}
             </div>
+
+            {/* QR Code Modal */}
+            {qrCodeParticipant && (
+                <div className="modal-overlay" onClick={closeQRCode}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>📱 QR Code for {qrCodeParticipant.first_name}</h2>
+                            <button onClick={closeQRCode} className="modal-close">✕</button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="qr-code-container">
+                                <img
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrCodeParticipant.link)}`}
+                                    alt="QR Code"
+                                    className="qr-code-image"
+                                />
+                            </div>
+                            <p className="qr-instructions">
+                                Scan this QR code to access the selection page for {qrCodeParticipant.first_name}
+                            </p>
+                            <div className="qr-link">
+                                <code>{qrCodeParticipant.link}</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
