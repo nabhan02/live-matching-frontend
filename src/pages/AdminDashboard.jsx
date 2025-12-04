@@ -410,16 +410,19 @@ const AdminDashboard = () => {
                                 <div className="summary-grid">
                                     {(() => {
                                         const matchCounts = {};
+                                        const participantIds = {};
                                         const selectedParticipants = getSelectedParticipants();
                                         matches.forEach(match => {
                                             matchCounts[match.name1] = (matchCounts[match.name1] || 0) + 1;
                                             matchCounts[match.name2] = (matchCounts[match.name2] || 0) + 1;
+                                            participantIds[match.name1] = match.participant1_id;
+                                            participantIds[match.name2] = match.participant2_id;
                                         });
                                         return Object.entries(matchCounts)
                                             .sort((a, b) => b[1] - a[1])
                                             .map(([name, count]) => (
                                                 <div key={name} className={`summary-item ${selectedParticipants.has(name) ? 'highlighted' : ''}`}>
-                                                    <span className="summary-name">{name}</span>
+                                                    <span className="summary-name">{name} (ID: {participantIds[name]})</span>
                                                     <span className="summary-count">{count} match{count !== 1 ? 'es' : ''}</span>
                                                 </div>
                                             ));
@@ -480,10 +483,17 @@ const AdminDashboard = () => {
                                                                         `${match.name1} and ${match.name2} are in this match.\n` +
                                                                         `But one of them is already in a selected match with:\n` +
                                                                         `${conflict.name1} ↔ ${conflict.name2}\n\n` +
-                                                                        `Do you want to select this match anyway?`;
+                                                                        `Do you want to select this match anyway?\n` +
+                                                                        `(The conflicting match will be deselected)`;
                                                                     if (!confirm(confirmMsg)) {
                                                                         return;
                                                                     }
+                                                                    // Remove the conflicting match
+                                                                    const newSelected = new Set(selectedMatches);
+                                                                    newSelected.delete(conflict.id);
+                                                                    newSelected.add(match.id);
+                                                                    setSelectedMatches(newSelected);
+                                                                    return;
                                                                 }
                                                             }
                                                             const newSelected = new Set(selectedMatches);
