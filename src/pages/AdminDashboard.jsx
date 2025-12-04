@@ -44,10 +44,69 @@ const AdminDashboard = () => {
     };
 
     const loadMatches = async () => {
-        const data = await adminAPI.getMatches();
-        setMatches(data);
+        try {
+            const data = await adminAPI.getMatches();
+            setMatches(data);
+        } catch (error) {
+            console.error('Error loading matches:', error);
+        }
     };
 
+    // Get all participants involved in selected matches
+    const getSelectedParticipants = () => {
+        const participants = new Set();
+        matches.forEach(match => {
+            if (selectedMatches.has(match.id)) {
+                participants.add(match.name1);
+                participants.add(match.name2);
+            }
+        });
+        return participants;
+    };
+
+    // Check if selecting a match would create a conflict
+    const getConflictingMatch = (matchId) => {
+        const match = matches.find(m => m.id === matchId);
+        if (!match) return null;
+
+        for (const selectedId of selectedMatches) {
+            if (selectedId === matchId) continue;
+            const selectedMatch = matches.find(m => m.id === selectedId);
+            if (!selectedMatch) continue;
+
+            // Check if any participant appears in both matches
+            if (selectedMatch.name1 === match.name1 || selectedMatch.name1 === match.name2 ||
+                selectedMatch.name2 === match.name1 || selectedMatch.name2 === match.name2) {
+                return selectedMatch;
+            }
+        }
+        return null;
+    };
+
+    // Smart select all - only select non-conflicting matches
+    const handleSmartSelectAll = () => {
+        const newSelected = new Set();
+        const usedParticipants = new Set();
+
+        // Sort by score (best matches first)
+        const sortedMatches = [...matches]
+            .map(match => ({
+                ...match,
+                score: 100 - ((match.rank1 + match.rank2) * 10)
+            }))
+            .sort((a, b) => b.score - a.score);
+
+        // Greedily select best matches without conflicts
+        sortedMatches.forEach(match => {
+            if (!usedParticipants.has(match.name1) && !usedParticipants.has(match.name2)) {
+                newSelected.add(match.id);
+                usedParticipants.add(match.name1);
+                usedParticipants.add(match.name2);
+            }
+        });
+
+        setSelectedMatches(newSelected);
+    };
     const handleFileUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -336,6 +395,7 @@ const AdminDashboard = () => {
                                 <div className="summary-grid">
                                     {(() => {
                                         const matchCounts = {};
+                                        const selectedParticipants = getSelectedParticipants();
                                         matches.forEach(match => {
                                             matchCounts[match.name1] = (matchCounts[match.name1] || 0) + 1;
                                             matchCounts[match.name2] = (matchCounts[match.name2] || 0) + 1;
@@ -343,7 +403,7 @@ const AdminDashboard = () => {
                                         return Object.entries(matchCounts)
                                             .sort((a, b) => b[1] - a[1])
                                             .map(([name, count]) => (
-                                                <div key={name} className="summary-item">
+                                                <div key={name} className={`summary-item ${selectedParticipants.has(name) ? 'highlighted' : ''}`}>
                                                     <span className="summary-name">{name}</span>
                                                     <span className="summary-count">{count} match{count !== 1 ? 'es' : ''}</span>
                                                 </div>
@@ -357,22 +417,30 @@ const AdminDashboard = () => {
                             <p className="empty-state">No matches yet. Run the matching algorithm to find mutual selections.</p>
                         ) : (
                             <>
-                                <div style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                <div style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
                                     <button
                                         onClick={() => {
-                                            if (selectedMatches.size === matches.length) {
+                                            if (selectedMatches.size > 0) {
                                                 setSelectedMatches(new Set());
                                             } else {
-                                                setSelectedMatches(new Set(matches.map(m => m.id)));
+                                                handleSmartSelectAll();
                                             }
                                         }}
                                         className="btn btn-secondary"
                                     >
-                                        {selectedMatches.size === matches.length ? '☐ Deselect All' : '☑ Select All'}
+                                        {selectedMatches.size > 0 ? '☐ Deselect All' : '☑ Smart Select (No Conflicts)'}
                                     </button>
                                     <span style={{ color: 'var(--text-secondary)' }}>
                                         {selectedMatches.size} of {matches.length} matches selected
                                     </span>
+                                    {selectedMatches.size > 0 && (() => {
+                                        const participants = getSelectedParticipants();
+                                        return (
+                                            <span style={{ color: 'var(--primary)', fontWeight: '600' }}>
+                                                {participants.size} unique participants
+                                            </span>
+                                        );
+                                    })()}
                                 </div>
                                 <div className="matches-list">
                                     {matches
@@ -390,6 +458,19 @@ const AdminDashboard = () => {
                                                         type="checkbox"
                                                         checked={selectedMatches.has(match.id)}
                                                         onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                const conflict = getConflictingMatch(match.id);
+                                                                if (conflict) {
+                                                                    const confirmMsg = `⚠️ Warning: This will create a conflict!\n\n` +
+                                                                        `${match.name1} and ${match.name2} are in this match.\n` +
+                                                                        `But one of them is already in a selected match with:\n` +
+                                                                        `${conflict.name1} ↔ ${conflict.name2}\n\n` +
+                                                                        `Do you want to select this match anyway?`;
+                                                                    if (!confirm(confirmMsg)) {
+                                                                        return;
+                                                                    }
+                                                                }
+                                                            }
                                                             const newSelected = new Set(selectedMatches);
                                                             if (e.target.checked) {
                                                                 newSelected.add(match.id);

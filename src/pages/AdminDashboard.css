@@ -335,6 +335,18 @@ th {
     background: var(--bg-secondary);
     border-radius: 8px;
     border: 1px solid var(--border);
+    transition: all 0.2s ease;
+}
+
+.summary-item.highlighted {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(139, 92, 246, 0.05) 100%);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.3);
+}
+
+.summary-item.highlighted .summary-name {
+    color: var(--primary);
+    font-weight: 700;
 }
 
 .summary-name {
