@@ -9,6 +9,7 @@ const AdminDashboard = () => {
     const [matches, setMatches] = useState([]);
     const [uploadStatus, setUploadStatus] = useState('');
     const [matchingStatus, setMatchingStatus] = useState('');
+    const [selectedMatches, setSelectedMatches] = useState(new Set());
     const [activeTab, setActiveTab] = useState('upload'); // upload, participants, matches
     const [loginError, setLoginError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -329,48 +330,107 @@ const AdminDashboard = () => {
                             </div>
                         )}
 
+                        {matches.length > 0 && (
+                            <div className="match-summary">
+                                <h3>📊 Match Count Summary</h3>
+                                <div className="summary-grid">
+                                    {(() => {
+                                        const matchCounts = {};
+                                        matches.forEach(match => {
+                                            matchCounts[match.name1] = (matchCounts[match.name1] || 0) + 1;
+                                            matchCounts[match.name2] = (matchCounts[match.name2] || 0) + 1;
+                                        });
+                                        return Object.entries(matchCounts)
+                                            .sort((a, b) => b[1] - a[1])
+                                            .map(([name, count]) => (
+                                                <div key={name} className="summary-item">
+                                                    <span className="summary-name">{name}</span>
+                                                    <span className="summary-count">{count} match{count !== 1 ? 'es' : ''}</span>
+                                                </div>
+                                            ));
+                                    })()}
+                                </div>
+                            </div>
+                        )}
+
                         {matches.length === 0 ? (
                             <p className="empty-state">No matches yet. Run the matching algorithm to find mutual selections.</p>
                         ) : (
-                            <div className="matches-list">
-                                {matches
-                                    .map(match => ({
-                                        ...match,
-                                        // Higher score is better: 100 - ((rank1 + rank2) * 10)
-                                        // Both ranked #1 (0,0) = 100, Both ranked #2 (1,1) = 80, etc.
-                                        score: 100 - ((match.rank1 + match.rank2) * 10)
-                                    }))
-                                    .sort((a, b) => b.score - a.score) // Sort descending (highest first)
-                                    .map(match => (
-                                        <div key={match.id} className="match-card">
-                                            <div className="match-header">
-                                                <div className={`match-score ${match.score >= 90 ? 'excellent' : match.score >= 70 ? 'great' : 'good'}`}>
-                                                    <div className="score-label">Match Score</div>
-                                                    <div className="score-value">{match.score}</div>
-                                                    <div className="score-subtitle">
-                                                        {match.score >= 90 ? '🔥 Excellent' : match.score >= 70 ? '⭐ Great' : '👍 Good'}
+                            <>
+                                <div style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                    <button
+                                        onClick={() => {
+                                            if (selectedMatches.size === matches.length) {
+                                                setSelectedMatches(new Set());
+                                            } else {
+                                                setSelectedMatches(new Set(matches.map(m => m.id)));
+                                            }
+                                        }}
+                                        className="btn btn-secondary"
+                                    >
+                                        {selectedMatches.size === matches.length ? '☐ Deselect All' : '☑ Select All'}
+                                    </button>
+                                    <span style={{ color: 'var(--text-secondary)' }}>
+                                        {selectedMatches.size} of {matches.length} matches selected
+                                    </span>
+                                </div>
+                                <div className="matches-list">
+                                    {matches
+                                        .map(match => ({
+                                            ...match,
+                                            // Higher score is better: 100 - ((rank1 + rank2) * 10)
+                                            // Both ranked #1 (0,0) = 100, Both ranked #2 (1,1) = 80, etc.
+                                            score: 100 - ((match.rank1 + match.rank2) * 10)
+                                        }))
+                                        .sort((a, b) => b.score - a.score) // Sort descending (highest first)
+                                        .map(match => (
+                                            <div key={match.id} className={`match-card ${selectedMatches.has(match.id) ? 'selected' : ''}`}>
+                                                <div className="match-checkbox">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedMatches.has(match.id)}
+                                                        onChange={(e) => {
+                                                            const newSelected = new Set(selectedMatches);
+                                                            if (e.target.checked) {
+                                                                newSelected.add(match.id);
+                                                            } else {
+                                                                newSelected.delete(match.id);
+                                                            }
+                                                            setSelectedMatches(newSelected);
+                                                        }}
+                                                        id={`match-${match.id}`}
+                                                    />
+                                                    <label htmlFor={`match-${match.id}`}>Select</label>
+                                                </div>
+                                                <div className="match-header">
+                                                    <div className={`match-score ${match.score >= 90 ? 'excellent' : match.score >= 70 ? 'great' : 'good'}`}>
+                                                        <div className="score-label">Match Score</div>
+                                                        <div className="score-value">{match.score}</div>
+                                                        <div className="score-subtitle">
+                                                            {match.score >= 90 ? '🔥 Excellent' : match.score >= 70 ? '⭐ Great' : '👍 Good'}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <div className="match-participants">
-                                                <div className="match-person">
-                                                    <span className="participant-name">{match.name1}</span>
-                                                    <span className="participant-id">ID: {match.participant1_id}</span>
-                                                    <span className="rank-badge">Ranked #{match.rank1 + 1}</span>
+                                                <div className="match-participants">
+                                                    <div className="match-person">
+                                                        <span className="participant-name">{match.name1}</span>
+                                                        <span className="participant-id">ID: {match.participant1_id}</span>
+                                                        <span className="rank-badge">Ranked #{match.rank1 + 1}</span>
+                                                    </div>
+                                                    <span className="match-icon">💕</span>
+                                                    <div className="match-person">
+                                                        <span className="participant-name">{match.name2}</span>
+                                                        <span className="participant-id">ID: {match.participant2_id}</span>
+                                                        <span className="rank-badge">Ranked #{match.rank2 + 1}</span>
+                                                    </div>
                                                 </div>
-                                                <span className="match-icon">💕</span>
-                                                <div className="match-person">
-                                                    <span className="participant-name">{match.name2}</span>
-                                                    <span className="participant-id">ID: {match.participant2_id}</span>
-                                                    <span className="rank-badge">Ranked #{match.rank2 + 1}</span>
+                                                <div className="match-note">
+                                                    {match.name1} ranked {match.name2} as #{match.rank1 + 1} choice • {match.name2} ranked {match.name1} as #{match.rank2 + 1} choice
                                                 </div>
                                             </div>
-                                            <div className="match-note">
-                                                {match.name1} ranked {match.name2} as #{match.rank1 + 1} choice • {match.name2} ranked {match.name1} as #{match.rank2 + 1} choice
-                                            </div>
-                                        </div>
-                                    ))}
-                            </div>
+                                        ))}
+                                </div>
+                            </>
                         )}
                     </div>
                 )}
