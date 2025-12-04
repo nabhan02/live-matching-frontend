@@ -196,10 +196,12 @@ th {
 }
 
 .match-card {
+    position: relative;
     background: var(--bg-card);
     padding: 1.5rem;
     border-radius: 12px;
     border: 1px solid var(--border);
+    transition: all 0.2s ease;
 }
 
 .match-header {
