@@ -313,12 +313,15 @@ const AdminDashboard = () => {
                             </div>
                         )}
 
+                        {/* Commented out to prevent accidental data loss */}
+                        {/*
                         <div className="danger-zone">
                             <h3>⚠️ Danger Zone</h3>
                             <button onClick={handleClearAll} className="btn btn-danger">
                                 Clear All Data
                             </button>
                         </div>
+                        */}
                     </div>
                 )}
 
@@ -353,7 +356,7 @@ const AdminDashboard = () => {
                                                 <tr key={p.id}>
                                                     <td>{p.id}</td>
                                                     <td>{p.first_name}</td>
-                                                    <td>{p.gender}</td>
+                                                    <td>{p.gender === 'female' ? 'Sister' : 'Brother'}</td>
                                                     <td>{p.email}</td>
                                                     <td className="link-cell">
                                                         <code>{p.link}</code>
